@@ -5,6 +5,14 @@
 #include <httplib.h>
 #include "ObjectStore.h"
 
+struct PlateInfo {
+    std::string id;
+    std::string parent;
+    std::string name;
+    std::string flag;
+    int fileCount = 0;
+};
+
 class ApiClient {
     ObjectStore& store;
 public:
@@ -17,23 +25,20 @@ public:
 
     bool isServerOn();
 
-    // Returns missing hashes from server.
     std::vector<std::string> checkBlobs(const std::vector<std::string>& hashes);
-
-    // Uploads one blob as raw bytes. Returns server hash.
     std::string uploadBlob(const std::string& data);
-
-    // Creates plate on server. Returns server-assigned plate id.
     std::string createPlate(const std::string& parent,
                             const std::map<std::string, std::string>& tree,
                             const std::string& name = "");
 
-    // Downloads latest plate tree from server: {path -> hash}.
     std::map<std::string, std::string> fetchLatestTree();
+    std::map<std::string, std::string> fetchTree(const std::string& plateId);
 
-    // Downloads blob by hash, writes to local store. Returns data.
+    // Returns plate chain from HEAD → root.
+    std::vector<PlateInfo> fetchLog();
+
     std::string downloadBlob(const std::string& hash);
 
-    // Creates project on server.
     bool initProject(const std::string& name);
+    bool deleteProject();
 };

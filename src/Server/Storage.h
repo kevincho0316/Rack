@@ -18,6 +18,7 @@ public:
 
     bool                     projectExists(const std::string& p) const;
     void                     createProject(const std::string& p);
+    void                     deleteProject(const std::string& p);
     std::vector<std::string> listProjects() const;
 
     bool        blobExists(const std::string& p, const std::string& hash) const;

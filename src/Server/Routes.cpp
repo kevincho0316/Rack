@@ -244,6 +244,17 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
         }
     });
 
+    // ---- delete project ----
+
+    svr.Delete(R"(/projects/([^/]+))",
+               [&storage](const httplib::Request& req, httplib::Response& res) {
+        std::string p = req.matches[1];
+        if (!requireProject(storage, p, res)) return;
+        storage.deleteProject(p);
+        std::cout << "  [project] deleted: " << p << std::endl;
+        res.set_content(json{{"deleted", p}}.dump(), "application/json");
+    });
+
     // ---- project detail (last to avoid shadowing sub-routes) ----
 
     svr.Get(R"(/projects/([^/]+))",

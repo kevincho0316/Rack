@@ -24,6 +24,10 @@ void ServerStorage::createProject(const std::string& p) {
     std::ofstream{headFile(p)};
 }
 
+void ServerStorage::deleteProject(const std::string& p) {
+    fs::remove_all(projectDir(p));
+}
+
 std::vector<std::string> ServerStorage::listProjects() const {
     std::vector<std::string> result;
     if (!fs::exists(dataDir)) return result;

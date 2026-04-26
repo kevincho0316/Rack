@@ -49,15 +49,53 @@ int push(Rack& rack) {
     return 0;
 }
 
-int pull(Rack& rack) {
+int pull(Rack& rack, bool overwriteOnly) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.pull();
+    rack.pull(overwriteOnly);
     return 0;
 }
 
 int init(Rack& rack, const std::string& project) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
     return rack.initProject(project) ? 0 : 1;
+}
+
+int log(Rack& rack) {
+    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    rack.log();
+    return 0;
+}
+
+int files(Rack& rack) {
+    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    rack.files();
+    return 0;
+}
+
+int status(Rack& rack) {
+    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    rack.status();
+    return 0;
+}
+
+int restore(Rack& rack, const std::string& plateId) {
+    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    rack.restore(plateId);
+    return 0;
+}
+
+int deleteProject(Rack& rack) {
+    if (rack.api.project.empty()) { std::cout << "No project set\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    std::cout << "Delete project '" << rack.api.project << "' from server. Cannot be undone.\n";
+    std::cout << "Type project name to confirm: ";
+    std::string confirm;
+    std::getline(std::cin, confirm);
+    if (confirm != rack.api.project) { std::cout << "Cancelled\n"; return 1; }
+    bool ok = rack.deleteProject();
+    if (ok) std::cout << "Deleted '" << rack.api.project << "'\n";
+    else    std::cout << "Delete failed\n";
+    return ok ? 0 : 1;
 }
 
 } // namespace Commands

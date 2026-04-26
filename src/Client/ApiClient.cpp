@@ -79,6 +79,50 @@ std::string ApiClient::downloadBlob(const std::string& hash) {
     return res->body;
 }
 
+std::map<std::string, std::string> ApiClient::fetchTree(const std::string& plateId) {
+    httplib::Client cli(domain);
+    auto res = cli.Get("/projects/" + project + "/plates/" + plateId + "/tree");
+    if (!res || res->status != 200) {
+        std::cout << "fetchTree failed\n";
+        return {};
+    }
+    auto j = json::parse(res->body);
+    std::map<std::string, std::string> result;
+    for (auto& [path, hash] : j.items())
+        result[path] = hash.get<std::string>();
+    return result;
+}
+
+std::vector<PlateInfo> ApiClient::fetchLog() {
+    httplib::Client cli(domain);
+
+    auto allRes = cli.Get("/projects/" + project + "/plates");
+    if (!allRes || allRes->status != 200) { std::cout << "fetchLog failed\n"; return {}; }
+
+    std::map<std::string, PlateInfo> byId;
+    for (const auto& p : json::parse(allRes->body)) {
+        PlateInfo pi;
+        pi.id        = p.value("id",     "");
+        pi.parent    = p.value("parent", "");
+        pi.name      = p.value("name",   "");
+        pi.flag      = p.value("flag",   "Normal");
+        pi.fileCount = p.contains("tree") ? (int)p["tree"].size() : 0;
+        byId[pi.id]  = pi;
+    }
+
+    auto headRes = cli.Get("/projects/" + project);
+    if (!headRes || headRes->status != 200) return {};
+    std::string head = json::parse(headRes->body).value("latest_plate", "");
+
+    std::vector<PlateInfo> chain;
+    std::string cur = head;
+    while (!cur.empty() && byId.count(cur)) {
+        chain.push_back(byId[cur]);
+        cur = byId[cur].parent;
+    }
+    return chain;
+}
+
 bool ApiClient::initProject(const std::string& name) {
     httplib::Client cli(domain);
     json body = {{"name", name}};
@@ -87,4 +131,10 @@ bool ApiClient::initProject(const std::string& name) {
     if (res->status == 409) { std::cout << "Project '" << name << "' already exists on server\n"; return true; }
     if (res->status != 201) { std::cout << "initProject failed: " << res->status << "\n"; return false; }
     return true;
+}
+
+bool ApiClient::deleteProject() {
+    httplib::Client cli(domain);
+    auto res = cli.Delete("/projects/" + project);
+    return res && res->status == 200;
 }

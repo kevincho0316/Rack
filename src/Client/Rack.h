@@ -26,12 +26,13 @@ public:
     void                     setDomain(const std::string& domain);
     bool                     isServerOn();
 
-    // Push local HEAD plate (blobs + plate) to server.
     void push();
-
-    // Pull latest plate from server, write files to disk.
-    void pull();
-
-    // Create project on server and set as active project.
+    void pull(bool overwriteOnly = false);
     bool initProject(const std::string& name);
+    bool deleteProject();
+
+    void log();
+    void files();
+    void status();
+    void restore(const std::string& plateId);
 };
