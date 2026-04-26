@@ -62,8 +62,12 @@ int main(int argc, char** argv) {
         return Commands::status(rack, proj);
     }
     else if (cmd == "diff") {
-        std::string plateA = (argc >= 3) ? argv[2] : "";
-        std::string plateB = (argc >= 4) ? argv[3] : "";
+        // rack diff              → local vs server:HEAD
+        // rack diff <plateId>   → local vs plateId
+        // rack diff <A> <B>     → plateA vs plateB
+        std::string plateA = "", plateB = "";
+        if      (argc == 3) { plateB = argv[2]; }
+        else if (argc >= 4) { plateA = argv[2]; plateB = argv[3]; }
         return Commands::diff(rack, plateA, plateB);
     }
     else if (cmd == "restore" && argc >= 3) {
