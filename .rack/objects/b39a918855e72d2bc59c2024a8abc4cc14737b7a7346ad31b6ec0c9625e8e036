@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//home/jjj/project/Rack/**)",
+      "Read(//home/jjj/**)",
+      "Bash(arduino-cli version *)",
+      "Read(//dev/**)",
+      "Bash(arduino-cli board *)"
+    ]
+  }
+}

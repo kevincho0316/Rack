@@ -1,0 +1,17 @@
+{
+    files = {
+        "build/.objs/server/linux/x86_64/release/src/Server/Routes.cpp.o",
+        "build/.objs/server/linux/x86_64/release/src/Server/Storage.cpp.o",
+        "build/.objs/server/linux/x86_64/release/src/Server/main.cpp.o",
+        "build/.objs/server/linux/x86_64/release/src/Common/hash.cpp.o"
+    },
+    values = {
+        "/usr/bin/g++",
+        {
+            "-m64",
+            "-s",
+            "-lssl",
+            "-lcrypto"
+        }
+    }
+}

@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/home/jjj/project/Rack",
+  "arguments": ["/usr/bin/g++", "-c", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-DNDEBUG", "-o", "build/.objs/Rack/linux/x86_64/release/src/main.cpp.o", "src/main.cpp"],
+  "file": "src/main.cpp"
+},
+{
+  "directory": "/home/jjj/project/Rack",
+  "arguments": ["/usr/bin/g++", "-c", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-Isrc/Common", "-I", "/home/jjj/.xmake/packages/c/cpp-httplib/v0.41.0/f35755d8a8ae41e2abc25f0c7b3357c7/include", "-I", "/home/jjj/.xmake/packages/n/nlohmann_json/v3.12.0/b36e201b1206419d94ef523b409412cf/include", "-DNDEBUG", "-o", "build/.objs/server/linux/x86_64/release/src/Server/main.cpp.o", "src/Server/main.cpp"],
+  "file": "src/Server/main.cpp"
+},
+{
+  "directory": "/home/jjj/project/Rack",
+  "arguments": ["/usr/bin/g++", "-c", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-Isrc/Common", "-I", "/home/jjj/.xmake/packages/c/cpp-httplib/v0.41.0/f35755d8a8ae41e2abc25f0c7b3357c7/include", "-I", "/home/jjj/.xmake/packages/n/nlohmann_json/v3.12.0/b36e201b1206419d94ef523b409412cf/include", "-DNDEBUG", "-o", "build/.objs/server/linux/x86_64/release/src/Common/hash.cpp.o", "src/Common/hash.cpp"],
+  "file": "src/Common/hash.cpp"
+},
+{
+  "directory": "/home/jjj/project/Rack",
+  "arguments": ["/usr/bin/g++", "-c", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-Isrc/Common", "-I", "/home/jjj/.xmake/packages/c/cpp-httplib/v0.41.0/f35755d8a8ae41e2abc25f0c7b3357c7/include", "-I", "/home/jjj/.xmake/packages/n/nlohmann_json/v3.12.0/b36e201b1206419d94ef523b409412cf/include", "-DNDEBUG", "-o", "build/.objs/client/linux/x86_64/release/src/Client/main.cpp.o", "src/Client/main.cpp"],
+  "file": "src/Client/main.cpp"
+},
+{
+  "directory": "/home/jjj/project/Rack",
+  "arguments": ["/usr/bin/g++", "-c", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-Isrc/Common", "-I", "/home/jjj/.xmake/packages/c/cpp-httplib/v0.41.0/f35755d8a8ae41e2abc25f0c7b3357c7/include", "-I", "/home/jjj/.xmake/packages/n/nlohmann_json/v3.12.0/b36e201b1206419d94ef523b409412cf/include", "-DNDEBUG", "-o", "build/.objs/client/linux/x86_64/release/src/Common/hash.cpp.o", "src/Common/hash.cpp"],
+  "file": "src/Common/hash.cpp"
+}]

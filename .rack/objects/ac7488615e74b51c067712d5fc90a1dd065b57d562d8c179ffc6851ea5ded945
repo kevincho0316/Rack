@@ -1,0 +1,25 @@
+{
+    depfiles = "RepoBuilder.o: src/Client/RepoBuilder.cpp src/Client/RepoBuilder.h  src/Client/ObjectStore.h src/Common/model.h src/Common/Blob.h  src/Common/hash.h src/Common/Tree.h src/Common/Plate.h\
+",
+    files = {
+        "src/Client/RepoBuilder.cpp"
+    },
+    depfiles_format = "gcc",
+    values = {
+        "/usr/bin/g++",
+        {
+            "-m64",
+            "-fvisibility=hidden",
+            "-fvisibility-inlines-hidden",
+            "-O3",
+            "-std=c++17",
+            "-Isrc/Common",
+            "-Isrc/Client",
+            "-isystem",
+            "/home/jjj/.xmake/packages/c/cpp-httplib/v0.41.0/f35755d8a8ae41e2abc25f0c7b3357c7/include",
+            "-isystem",
+            "/home/jjj/.xmake/packages/n/nlohmann_json/v3.12.0/b36e201b1206419d94ef523b409412cf/include",
+            "-DNDEBUG"
+        }
+    }
+}
