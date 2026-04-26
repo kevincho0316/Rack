@@ -98,18 +98,25 @@ int restore(Rack& rack, const std::string& plateId, const std::string& proj) {
     return 0;
 }
 
-int deleteProject(Rack& rack, const std::string& proj) {
+int deleteProject(Rack& rack, const std::string& proj, bool autoConfirm) {
     ScopedProject sp(rack.api.project, proj);
     if (rack.api.project.empty()) { std::cout << "No project set\n"; return 1; }
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    std::cout << "Delete '" << rack.api.project << "' from server? [y/N] ";
-    std::string confirm;
-    std::getline(std::cin, confirm);
-    if (confirm != "y" && confirm != "Y") { std::cout << "Cancelled\n"; return 1; }
+    if (!autoConfirm) {
+        std::cout << "Delete '" << rack.api.project << "' from server? [y/N] ";
+        std::string confirm;
+        std::getline(std::cin, confirm);
+        if (confirm != "y" && confirm != "Y") { std::cout << "Cancelled\n"; return 1; }
+    }
     bool ok = rack.deleteProject();
     if (ok) std::cout << "Deleted '" << rack.api.project << "'\n";
     else    std::cout << "Delete failed\n";
     return ok ? 0 : 1;
+}
+
+int diff(Rack& rack, const std::string& plateIdA, const std::string& plateIdB) {
+    rack.diff(plateIdA, plateIdB);
+    return 0;
 }
 
 } // namespace Commands

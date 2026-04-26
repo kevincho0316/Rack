@@ -1,5 +1,6 @@
 #include "Routes.h"
 #include "hash.h"
+#include <chrono>
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -116,8 +117,12 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
             json id_src = {{"parent", parent}, {"tree", tree}};
             std::string id = GetHash(id_src.dump());
 
+            auto uploaded_at = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+
             json plate = {{"id", id}, {"parent", parent}, {"name", name},
-                          {"note", note}, {"flag", flag}, {"tree", tree}};
+                          {"note", note}, {"flag", flag}, {"tree", tree},
+                          {"uploaded_at", uploaded_at}};
 
             bool existed = storage.plateExists(p, id);
             if (!existed) {

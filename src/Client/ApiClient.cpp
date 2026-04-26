@@ -104,11 +104,12 @@ std::vector<PlateInfo> ApiClient::fetchLog() {
     std::map<std::string, PlateInfo> byId;
     for (const auto& p : json::parse(allRes->body)) {
         PlateInfo pi;
-        pi.id        = p.value("id",     "");
-        pi.parent    = p.value("parent", "");
-        pi.name      = p.value("name",   "");
-        pi.flag      = p.value("flag",   "Normal");
-        pi.fileCount = p.contains("tree") ? (int)p["tree"].size() : 0;
+        pi.id         = p.value("id",     "");
+        pi.parent     = p.value("parent", "");
+        pi.name       = p.value("name",   "");
+        pi.flag       = p.value("flag",   "Normal");
+        pi.fileCount  = p.contains("tree") ? (int)p["tree"].size() : 0;
+        pi.uploadedAt = p.contains("uploaded_at") ? p["uploaded_at"].get<long long>() : 0;
         byId[pi.id]  = pi;
     }
 

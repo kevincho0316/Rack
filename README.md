@@ -23,19 +23,19 @@ rack commit [-n <name>] [-f <flag>]      Hash & store current files, auto-push i
 rack push   [project]                    Upload local HEAD to server
 rack pull   [project] [-o]               Sync local files to server HEAD (-o: no deletion)
 
-rack log    [project]                    Show plate history (HEAD → root)
+rack log    [project]                    Show plate history with upload timestamps
 rack files  [project]                    List files in latest plate
 rack status [project]                    Compare local HEAD vs server HEAD
 rack restore <plate-id> [project]        Restore files from a specific plate
 
+rack diff                                Diff local HEAD vs server HEAD
+rack diff <plate-id>                     Diff local HEAD vs specific plate
+rack diff <plate-id-a> <plate-id-b>      Diff two server plates
+
 rack projects                            List all projects on server
 rack init <project>                      Create/activate project on server
 rack domain <url>                        Set server URL (saved globally in ~/.rack/config)
-rack delete-project                      Delete active project from server (requires confirmation)
-  rack delete-project            # deletes active project              
-  rack delete-project myproject  # deletes named project               
-  # prompts: Delete 'myproject' from server? [y/N]   
-
+rack delete-project [project] [-y]       Delete project from server (-y skips confirmation)
 
 rack cat <hash>                          Print object contents by hash
 rack ls                                  List all local object hashes
@@ -43,12 +43,16 @@ rack reconstruct                         Rebuild files from local HEAD plate
 rack serverCheck                         Exit 0 if server reachable
 ```
 
+Plate IDs can be shortened to any unique prefix (e.g. `931121fa8fb5`).
+
 ### Commit flags
 
 | Flag | Meaning |
 |------|---------|
 | `-n <name>` | Label for this plate (e.g. `"fix login bug"`) |
 | `-f <flag>` | Plate flag, default `Normal` (e.g. `Hotfix`, `Knot`) |
+
+Name/flag-only commits (no file changes) are allowed — useful for relabeling.
 
 ## Architecture
 
@@ -70,4 +74,4 @@ Server stores data under `data/<project>/` with `blobs/`, `plates/`, and `HEAD`.
 |------|-------------|
 | Blob | Raw file contents, hash = SHA-256(content) |
 | Tree | Directory listing of branches (file/dir name + hash pairs) |
-| Plate | Commit — parent, tree hash, name, flag |
+| Plate | Commit — parent, tree hash, name, flag, upload timestamp |

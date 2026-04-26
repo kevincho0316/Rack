@@ -10,7 +10,8 @@ struct PlateInfo {
     std::string parent;
     std::string name;
     std::string flag;
-    int fileCount = 0;
+    int         fileCount  = 0;
+    long long   uploadedAt = 0;
 };
 
 class ApiClient {

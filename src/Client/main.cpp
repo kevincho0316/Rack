@@ -4,10 +4,13 @@
 
 int main(int argc, char** argv) {
     if (argc < 2) {
-        std::cout << "Usage: rack <command> [project]\n"
+        std::cout << "Usage: rack <command> [options]\n"
                      "  commit [-n <name>] [-f <flag>]       hash & store, push if server up\n"
                      "  push   [project]                     upload local HEAD to server\n"
                      "  pull   [project] [-o]                sync to server HEAD (-o: no delete)\n"
+                     "  diff                                 local HEAD vs server HEAD\n"
+                     "  diff   <plateId>                     local HEAD vs specific plate\n"
+                     "  diff   <plateIdA> <plateIdB>         server plate A vs server plate B\n"
                      "  log    [project]                     show plate history\n"
                      "  files  [project]                     list files in latest plate\n"
                      "  status [project]                     compare local HEAD vs server\n"
@@ -58,6 +61,11 @@ int main(int argc, char** argv) {
         std::string proj = (argc >= 3) ? argv[2] : "";
         return Commands::status(rack, proj);
     }
+    else if (cmd == "diff") {
+        std::string plateA = (argc >= 3) ? argv[2] : "";
+        std::string plateB = (argc >= 4) ? argv[3] : "";
+        return Commands::diff(rack, plateA, plateB);
+    }
     else if (cmd == "restore" && argc >= 3) {
         std::string proj = (argc >= 4) ? argv[3] : "";
         return Commands::restore(rack, argv[2], proj);
@@ -70,8 +78,13 @@ int main(int argc, char** argv) {
     else if (cmd == "serverCheck")            return Commands::serverCheck(rack);
     else if (cmd == "projects")               return Commands::projects(rack);
     else if (cmd == "delete-project") {
-        std::string proj = (argc >= 3) ? argv[2] : "";
-        return Commands::deleteProject(rack, proj);
+        std::string proj; bool autoConfirm = false;
+        for (int i = 2; i < argc; ++i) {
+            std::string a = argv[i];
+            if (a == "-y") autoConfirm = true;
+            else proj = a;
+        }
+        return Commands::deleteProject(rack, proj, autoConfirm);
     }
     else { std::cout << "Unknown command: " << cmd << "\n"; return 1; }
 }

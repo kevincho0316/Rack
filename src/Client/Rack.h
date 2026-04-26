@@ -39,4 +39,5 @@ public:
     void projects();
     void status(const std::string& proj = "");
     void restore(const std::string& plateId, const std::string& proj = "");
+    void diff(const std::string& plateIdA = "", const std::string& plateIdB = "");
 };

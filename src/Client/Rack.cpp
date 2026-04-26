@@ -1,9 +1,14 @@
 #include "Rack.h"
 #include "Paths.h"
+#include <algorithm>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <set>
+#include <sstream>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include "ProgressBar.h"
 
@@ -189,11 +194,20 @@ void Rack::log(const std::string& proj) {
     std::cout << "Project: " << api.project << "  (" << chain.size() << " plates)\n";
     for (size_t i = 0; i < chain.size(); ++i) {
         const auto& p = chain[i];
+        std::string timeStr = "unknown";
+        if (p.uploadedAt != 0) {
+            std::time_t t = static_cast<std::time_t>(p.uploadedAt);
+            std::tm* tm = std::localtime(&t);
+            std::ostringstream oss;
+            oss << std::put_time(tm, "%Y-%m-%d %H:%M:%S");
+            timeStr = oss.str();
+        }
         std::string label = (i == 0) ? " <- HEAD" : "";
         std::cout << p.id.substr(0, 12)
                   << "  [" << p.flag << "]"
                   << "  \"" << p.name << "\""
                   << "  " << p.fileCount << " files"
+                  << "  " << timeStr
                   << label << "\n";
     }
 }
@@ -271,6 +285,172 @@ void Rack::restore(const std::string& plateId, const std::string& proj) {
     }
     std::cout << "Restored plate " << plateId.substr(0, 12) << "\n";
 }
+
+// ── diff helpers ────────────────────────────────────────────────────────────
+
+static std::vector<std::string> splitLines(const std::string& s) {
+    std::vector<std::string> lines;
+    size_t start = 0, pos;
+    while ((pos = s.find('\n', start)) != std::string::npos) {
+        lines.push_back(s.substr(start, pos - start));
+        start = pos + 1;
+    }
+    lines.push_back(s.substr(start));
+    return lines;
+}
+
+static bool isBinary(const std::string& s) {
+    return s.find('\0') != std::string::npos;
+}
+
+static void printUnifiedDiff(const std::string& path,
+                              const std::string& contA,
+                              const std::string& contB) {
+    std::string headerA = contA.empty() ? "/dev/null" : "a/" + path;
+    std::string headerB = contB.empty() ? "/dev/null" : "b/" + path;
+    std::cout << "--- " << headerA << "\n+++ " << headerB << "\n";
+
+    if (isBinary(contA) || isBinary(contB)) {
+        std::cout << "  Binary files differ\n";
+        return;
+    }
+
+    auto a = splitLines(contA);
+    auto b = splitLines(contB);
+    if (contA.empty()) a.clear();
+    if (contB.empty()) b.clear();
+
+    int m = (int)a.size(), n = (int)b.size();
+
+    if (m > 2000 || n > 2000) {
+        std::cout << "@@ file too large (" << m << " vs " << n << " lines) @@\n";
+        return;
+    }
+
+    // LCS DP
+    std::vector<std::vector<int>> dp(m + 1, std::vector<int>(n + 1, 0));
+    for (int i = 1; i <= m; i++)
+        for (int j = 1; j <= n; j++)
+            dp[i][j] = (a[i-1] == b[j-1]) ? dp[i-1][j-1] + 1
+                                            : std::max(dp[i-1][j], dp[i][j-1]);
+
+    // Backtrack into edit ops: -1=removed, +1=added, 0=context
+    std::vector<std::pair<int, std::string>> ops;
+    int i = m, j = n;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && a[i-1] == b[j-1]) {
+            ops.push_back({0, a[i-1]}); i--; j--;
+        } else if (j > 0 && (i == 0 || dp[i][j-1] >= dp[i-1][j])) {
+            ops.push_back({1, b[j-1]}); j--;
+        } else {
+            ops.push_back({-1, a[i-1]}); i--;
+        }
+    }
+    std::reverse(ops.begin(), ops.end());
+
+    // Mark lines to show (changed ± 3 context)
+    int sz = (int)ops.size();
+    std::vector<bool> show(sz, false);
+    for (int k = 0; k < sz; k++) {
+        if (ops[k].first != 0) {
+            for (int c = std::max(0, k - 3); c <= std::min(sz - 1, k + 3); c++)
+                show[c] = true;
+        }
+    }
+
+    bool inHunk = false;
+    for (int k = 0; k < sz; k++) {
+        if (!show[k]) { inHunk = false; continue; }
+        if (!inHunk) { std::cout << "@@ ... @@\n"; inHunk = true; }
+        char c = ops[k].first == -1 ? '-' : ops[k].first == 1 ? '+' : ' ';
+        std::cout << c << ops[k].second << "\n";
+    }
+}
+
+void Rack::diff(const std::string& plateIdA, const std::string& plateIdB) {
+    if (!api.isServerOn()) { std::cout << "Server offline\n"; return; }
+
+    // Resolve short prefix → full plate ID
+    auto resolveId = [&](const std::string& id) -> std::string {
+        if (id.size() == 64) return id;
+        auto chain = api.fetchLog();
+        for (auto& pi : chain)
+            if (pi.id.rfind(id, 0) == 0) return pi.id;
+        std::cout << "Plate not found: " << id << "\n";
+        return id;
+    };
+
+    bool aIsLocal = plateIdA.empty();
+
+    std::map<std::string, std::string> treeA, treeB;
+    std::string labelA, labelB;
+
+    if (aIsLocal) {
+        std::string plateHash = store.readInit();
+        if (plateHash.empty()) { std::cout << "No local commits\n"; return; }
+        std::string treeHash = extractField(store.read(plateHash), "[Tree]");
+        treeA  = reader.flattenTree(treeHash);
+        labelA = "local";
+    } else {
+        std::string fullA = resolveId(plateIdA);
+        treeA  = api.fetchTree(fullA);
+        labelA = fullA.substr(0, 12);
+    }
+
+    if (plateIdB.empty()) {
+        treeB  = api.fetchLatestTree();
+        labelB = "server:HEAD";
+    } else {
+        std::string fullB = resolveId(plateIdB);
+        treeB  = api.fetchTree(fullB);
+        labelB = fullB.substr(0, 12);
+    }
+
+    std::cout << "diff " << labelA << " → " << labelB << "\n";
+
+    std::set<std::string> allPaths;
+    for (auto& [p, h] : treeA) allPaths.insert(p);
+    for (auto& [p, h] : treeB) allPaths.insert(p);
+
+    auto fetchContent = [&](const std::string& hash, bool preferLocal) -> std::string {
+        if (preferLocal) {
+            std::string s = store.read(hash);
+            if (!s.empty()) return s;
+        }
+        return api.downloadBlob(hash);
+    };
+
+    int added = 0, removed = 0, modified = 0;
+
+    for (const auto& path : allPaths) {
+        bool inA = treeA.count(path), inB = treeB.count(path);
+        if (inA && inB && treeA.at(path) == treeB.at(path)) continue;
+
+        std::cout << "\n";
+        if (!inA) {
+            ++added;
+            std::string cont = fetchContent(treeB.at(path), true);
+            printUnifiedDiff(path, "", cont);
+        } else if (!inB) {
+            ++removed;
+            std::string cont = fetchContent(treeA.at(path), aIsLocal);
+            printUnifiedDiff(path, cont, "");
+        } else {
+            ++modified;
+            std::string contA = fetchContent(treeA.at(path), aIsLocal);
+            std::string contB = fetchContent(treeB.at(path), true);
+            printUnifiedDiff(path, contA, contB);
+        }
+    }
+
+    if (added == 0 && removed == 0 && modified == 0)
+        std::cout << "No differences\n";
+    else
+        std::cout << "\n" << added << " added, " << removed << " removed, "
+                  << modified << " modified\n";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 bool Rack::deleteProject() {
     return api.deleteProject();
