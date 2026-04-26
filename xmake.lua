@@ -7,6 +7,7 @@ local is_termux = is_host("linux") and os.getenv("TERMUX_VERSION")
 
 if is_termux then
     set_toolchains("clang")
+    add_cxxflags("-isystem /data/data/com.termux/files/usr/include/c++/v1", {force = true})
 end
 
 target("client")
