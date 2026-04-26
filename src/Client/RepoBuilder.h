@@ -12,5 +12,6 @@ public:
 
     std::string createBlobFile(const std::string& content);
     std::string createTreeFile(const std::string& path);
-    std::string createPlateFile();
+    std::string createPlateFile(const std::string& name = "",
+                                const std::string& flag = "Normal");
 };

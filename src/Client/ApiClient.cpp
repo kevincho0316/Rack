@@ -1,5 +1,6 @@
 #include "ApiClient.h"
 #include <iostream>
+#include <set>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -39,11 +40,12 @@ std::string ApiClient::uploadBlob(const std::string& data) {
 
 std::string ApiClient::createPlate(const std::string& parent,
                                    const std::map<std::string, std::string>& tree,
-                                   const std::string& name) {
+                                   const std::string& name,
+                                   const std::string& flag) {
     httplib::Client cli(domain);
     json treeJson = json::object();
     for (const auto& [path, hash] : tree) treeJson[path] = hash;
-    json body = {{"parent", parent}, {"name", name}, {"flag", "Normal"}, {"tree", treeJson}};
+    json body = {{"parent", parent}, {"name", name}, {"flag", flag}, {"tree", treeJson}};
     auto res = cli.Post("/projects/" + project + "/plates",
                         body.dump(), "application/json");
     if (!res || res->status != 201) {
@@ -115,12 +117,29 @@ std::vector<PlateInfo> ApiClient::fetchLog() {
     std::string head = json::parse(headRes->body).value("latest_plate", "");
 
     std::vector<PlateInfo> chain;
+    std::set<std::string> seen;
     std::string cur = head;
-    while (!cur.empty() && byId.count(cur)) {
+    while (!cur.empty() && byId.count(cur) && !seen.count(cur)) {
+        seen.insert(cur);
         chain.push_back(byId[cur]);
         cur = byId[cur].parent;
     }
+
+    // plates with broken/old parent links not reached by chain walk
+    for (const auto& [id, pi] : byId)
+        if (!seen.count(id)) chain.push_back(pi);
+
     return chain;
+}
+
+std::vector<std::string> ApiClient::listProjects() {
+    httplib::Client cli(domain);
+    auto res = cli.Get("/projects");
+    if (!res || res->status != 200) { std::cout << "listProjects failed\n"; return {}; }
+    auto j = json::parse(res->body);
+    std::vector<std::string> result;
+    for (const auto& p : j) result.push_back(p.get<std::string>());
+    return result;
 }
 
 bool ApiClient::initProject(const std::string& name) {

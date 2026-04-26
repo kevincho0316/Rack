@@ -10,6 +10,14 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
+struct ScopedProject {
+    std::string& ref;
+    std::string  saved;
+    ScopedProject(std::string& r, const std::string& override)
+        : ref(r), saved(r) { if (!override.empty()) r = override; }
+    ~ScopedProject() { ref = saved; }
+};
+
 static std::string extractField(const std::string& data, const std::string& key) {
     size_t pos = data.find(key);
     if (pos == std::string::npos) return "";
@@ -29,7 +37,8 @@ void Rack::loadConfig() {
         if (j.contains("domain")) api.domain = j["domain"];
     });
     loadJson(RackPaths::configFile, [&](const json& j) {
-        if (j.contains("project")) api.project = j["project"];
+        if (j.contains("project"))       api.project  = j["project"];
+        if (j.contains("serverPlateId")) serverPlateId = j["serverPlateId"];
     });
 }
 
@@ -41,7 +50,7 @@ void Rack::saveConfig() {
     g << json{{"domain", api.domain}}.dump(2);
 
     std::ofstream l(RackPaths::configFile);
-    l << json{{"project", api.project}}.dump(2);
+    l << json{{"project", api.project}, {"serverPlateId", serverPlateId}}.dump(2);
 }
 
 Rack::Rack()
@@ -55,8 +64,8 @@ Rack::Rack()
     loadConfig();
 }
 
-std::string Rack::commit() {
-    return builder.createPlateFile();
+std::string Rack::commit(const std::string& name, const std::string& flag) {
+    return builder.createPlateFile(name, flag);
 }
 
 std::string Rack::readFile(const std::string& hash) {
@@ -81,7 +90,10 @@ bool Rack::isServerOn() {
     return api.isServerOn();
 }
 
-void Rack::push() {
+void Rack::push(const std::string& proj) {
+    ScopedProject sp(api.project, proj);
+    bool isOverride = !proj.empty() && proj != sp.saved;
+
     if (api.project.empty()) {
         std::cout << "[WARN] No project set. Run: rack init <project>\n";
         return;
@@ -91,7 +103,6 @@ void Rack::push() {
     if (plateHash.empty()) { std::cout << "Nothing to push — no commits\n"; return; }
 
     std::string plateData  = store.read(plateHash);
-    std::string parentHash = extractField(plateData, "[Parent]");
     std::string treeHash   = extractField(plateData, "[Tree]");
 
     auto flatTree = reader.flattenTree(treeHash);
@@ -114,11 +125,20 @@ void Rack::push() {
         }
     }
 
-    std::string plateId = api.createPlate(parentHash, flatTree, plateHash.substr(0, 8));
-    if (!plateId.empty()) std::cout << "Pushed plate: " << plateId << "\n";
+    std::string plateName = extractField(plateData, "[Name]");
+    std::string plateFlag = extractField(plateData, "[Flag]");
+    if (plateFlag.empty()) plateFlag = "Normal";
+
+    std::string parentId = isOverride ? "" : serverPlateId;
+    std::string plateId  = api.createPlate(parentId, flatTree, plateName, plateFlag);
+    if (!plateId.empty()) {
+        if (!isOverride) { serverPlateId = plateId; saveConfig(); }
+        std::cout << "Pushed plate: " << plateId << "\n";
+    }
 }
 
-void Rack::pull(bool overwriteOnly) {
+void Rack::pull(bool overwriteOnly, const std::string& proj) {
+    ScopedProject sp(api.project, proj);
     if (api.project.empty()) {
         std::cout << "[WARN] No project set. Run: rack init <project>\n";
         return;
@@ -161,7 +181,8 @@ void Rack::pull(bool overwriteOnly) {
     std::cout << "Pull complete\n";
 }
 
-void Rack::log() {
+void Rack::log(const std::string& proj) {
+    ScopedProject sp(api.project, proj);
     if (api.project.empty()) { std::cout << "[WARN] No project set\n"; return; }
     auto chain = api.fetchLog();
     if (chain.empty()) { std::cout << "No plates yet\n"; return; }
@@ -177,7 +198,8 @@ void Rack::log() {
     }
 }
 
-void Rack::files() {
+void Rack::files(const std::string& proj) {
+    ScopedProject sp(api.project, proj);
     if (api.project.empty()) { std::cout << "[WARN] No project set\n"; return; }
     auto tree = api.fetchLatestTree();
     if (tree.empty()) { std::cout << "No files on server\n"; return; }
@@ -186,7 +208,16 @@ void Rack::files() {
         std::cout << "  " << path << "\n";
 }
 
-void Rack::status() {
+void Rack::projects() {
+    auto list = api.listProjects();
+    if (list.empty()) { std::cout << "No projects on server\n"; return; }
+    std::cout << "Projects (" << list.size() << "):\n";
+    for (const auto& p : list)
+        std::cout << "  " << p << (p == api.project ? "  <- active" : "") << "\n";
+}
+
+void Rack::status(const std::string& proj) {
+    ScopedProject sp(api.project, proj);
     std::string plateHash = store.readInit();
     if (plateHash.empty()) { std::cout << "No local commits\n"; return; }
 
@@ -210,7 +241,8 @@ void Rack::status() {
     if (clean) std::cout << "Up to date with server\n";
 }
 
-void Rack::restore(const std::string& plateId) {
+void Rack::restore(const std::string& plateId, const std::string& proj) {
+    ScopedProject sp(api.project, proj);
     if (api.project.empty()) { std::cout << "[WARN] No project set\n"; return; }
     auto tree = api.fetchTree(plateId);
     if (tree.empty()) { std::cout << "Plate not found or empty\n"; return; }

@@ -67,7 +67,7 @@ std::string RepoBuilder::createTreeFile(const std::string& path) {
     return createTreeFileImpl(path, nullptr);
 }
 
-std::string RepoBuilder::createPlateFile() {
+std::string RepoBuilder::createPlateFile(const std::string& name, const std::string& flag) {
     std::string parentHash = store.readInit();
 
     int total = countFiles(fs::current_path());
@@ -77,7 +77,7 @@ std::string RepoBuilder::createPlateFile() {
 
     if (store.newFile.empty()) return "No Diff Found";
 
-    Plate plate(parentHash, treeHash);
+    Plate plate(parentHash, treeHash, name, flag);
     if (store.exists(plate.hash)) return plate.hash;
     store.write(plate.hash, plate.serialize());
     store.writeInit(plate.hash);

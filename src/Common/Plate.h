@@ -2,20 +2,23 @@
 #include <string>
 #include "hash.h"
 
-enum PlateFlag { Normal, Knot };
-
 struct Plate {
     std::string hash;
     std::string parent_hash;
     std::string init_Tree_hash;
-    PlateFlag flag = Normal;
+    std::string name;
+    std::string flag = "Normal";
 
     std::string serialize() const {
-        return "[Parent]" + parent_hash + "\n" + "[Tree]" + init_Tree_hash + "\n";
+        return "[Parent]" + parent_hash + "\n"
+             + "[Tree]"   + init_Tree_hash + "\n"
+             + "[Name]"   + name + "\n"
+             + "[Flag]"   + flag + "\n";
     }
 
-    Plate(std::string parent, std::string tree)
-        : parent_hash(parent), init_Tree_hash(tree) {
+    Plate(std::string parent, std::string tree,
+          std::string name = "", std::string flag = "Normal")
+        : parent_hash(parent), init_Tree_hash(tree), name(name), flag(flag) {
         hash = GetHash(serialize());
     }
 };

@@ -29,7 +29,8 @@ public:
     std::string uploadBlob(const std::string& data);
     std::string createPlate(const std::string& parent,
                             const std::map<std::string, std::string>& tree,
-                            const std::string& name = "");
+                            const std::string& name = "",
+                            const std::string& flag = "Normal");
 
     std::map<std::string, std::string> fetchLatestTree();
     std::map<std::string, std::string> fetchTree(const std::string& plateId);
@@ -39,6 +40,7 @@ public:
 
     std::string downloadBlob(const std::string& hash);
 
+    std::vector<std::string> listProjects();
     bool initProject(const std::string& name);
     bool deleteProject();
 };

@@ -6,8 +6,8 @@ namespace fs = std::filesystem;
 
 namespace Commands {
 
-int commit(Rack& rack) {
-    std::string result = rack.commit();
+int commit(Rack& rack, const std::string& name, const std::string& flag) {
+    std::string result = rack.commit(name, flag);
     std::cout << "Local commit: " << result << "\n";
     if (result == "No Diff Found") return 0;
     if (!rack.api.project.empty() && rack.isServerOn()) {
@@ -43,15 +43,15 @@ int serverCheck(Rack& rack) {
     return rack.isServerOn() ? 0 : 1;
 }
 
-int push(Rack& rack) {
+int push(Rack& rack, const std::string& proj) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.push();
+    rack.push(proj);
     return 0;
 }
 
-int pull(Rack& rack, bool overwriteOnly) {
+int pull(Rack& rack, bool overwriteOnly, const std::string& proj) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.pull(overwriteOnly);
+    rack.pull(overwriteOnly, proj);
     return 0;
 }
 
@@ -60,27 +60,33 @@ int init(Rack& rack, const std::string& project) {
     return rack.initProject(project) ? 0 : 1;
 }
 
-int log(Rack& rack) {
+int log(Rack& rack, const std::string& proj) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.log();
+    rack.log(proj);
     return 0;
 }
 
-int files(Rack& rack) {
+int files(Rack& rack, const std::string& proj) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.files();
+    rack.files(proj);
     return 0;
 }
 
-int status(Rack& rack) {
+int projects(Rack& rack) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.status();
+    rack.projects();
     return 0;
 }
 
-int restore(Rack& rack, const std::string& plateId) {
+int status(Rack& rack, const std::string& proj) {
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    rack.restore(plateId);
+    rack.status(proj);
+    return 0;
+}
+
+int restore(Rack& rack, const std::string& plateId, const std::string& proj) {
+    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    rack.restore(plateId, proj);
     return 0;
 }
 
