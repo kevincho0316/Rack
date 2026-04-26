@@ -7,7 +7,7 @@ local is_termux = is_host("linux") and os.getenv("TERMUX_VERSION")
 
 if is_termux then
     set_toolchains("clang")
-    add_includedirs("/data/data/com.termux/files/usr/include/c++/v1")
+    add_sysincludedirs("/data/data/com.termux/files/usr/include/c++/v1")
 end
 
 target("client")
