@@ -16,7 +16,7 @@ namespace Commands {
     int log(Rack& rack, const std::string& proj = "");
     int files(Rack& rack, const std::string& proj = "");
     int projects(Rack& rack);
-    int deleteProject(Rack& rack);
+    int deleteProject(Rack& rack, const std::string& proj = "");
     int status(Rack& rack, const std::string& proj = "");
     int restore(Rack& rack, const std::string& plateId, const std::string& proj = "");
 }

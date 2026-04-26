@@ -32,6 +32,10 @@ rack projects                            List all projects on server
 rack init <project>                      Create/activate project on server
 rack domain <url>                        Set server URL (saved globally in ~/.rack/config)
 rack delete-project                      Delete active project from server (requires confirmation)
+  rack delete-project            # deletes active project              
+  rack delete-project myproject  # deletes named project               
+  # prompts: Delete 'myproject' from server? [y/N]   
+
 
 rack cat <hash>                          Print object contents by hash
 rack ls                                  List all local object hashes

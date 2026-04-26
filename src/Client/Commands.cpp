@@ -4,6 +4,14 @@
 
 namespace fs = std::filesystem;
 
+namespace {
+struct ScopedProject {
+    std::string& ref; std::string saved;
+    ScopedProject(std::string& r, const std::string& o) : ref(r), saved(r) { if (!o.empty()) r = o; }
+    ~ScopedProject() { ref = saved; }
+};
+}
+
 namespace Commands {
 
 int commit(Rack& rack, const std::string& name, const std::string& flag) {
@@ -90,14 +98,14 @@ int restore(Rack& rack, const std::string& plateId, const std::string& proj) {
     return 0;
 }
 
-int deleteProject(Rack& rack) {
+int deleteProject(Rack& rack, const std::string& proj) {
+    ScopedProject sp(rack.api.project, proj);
     if (rack.api.project.empty()) { std::cout << "No project set\n"; return 1; }
     if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
-    std::cout << "Delete project '" << rack.api.project << "' from server. Cannot be undone.\n";
-    std::cout << "Type project name to confirm: ";
+    std::cout << "Delete '" << rack.api.project << "' from server? [y/N] ";
     std::string confirm;
     std::getline(std::cin, confirm);
-    if (confirm != rack.api.project) { std::cout << "Cancelled\n"; return 1; }
+    if (confirm != "y" && confirm != "Y") { std::cout << "Cancelled\n"; return 1; }
     bool ok = rack.deleteProject();
     if (ok) std::cout << "Deleted '" << rack.api.project << "'\n";
     else    std::cout << "Delete failed\n";

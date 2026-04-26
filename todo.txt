@@ -1,1 +1,5 @@
 xmake -v 2>&1 | grep RepoReader -A1 | head -2
+
+
+
+rack pull -o will not delete the file

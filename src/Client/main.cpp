@@ -69,6 +69,9 @@ int main(int argc, char** argv) {
     else if (cmd == "reconstruct")            return Commands::reconstruct(rack);
     else if (cmd == "serverCheck")            return Commands::serverCheck(rack);
     else if (cmd == "projects")               return Commands::projects(rack);
-    else if (cmd == "delete-project")         return Commands::deleteProject(rack);
+    else if (cmd == "delete-project") {
+        std::string proj = (argc >= 3) ? argv[2] : "";
+        return Commands::deleteProject(rack, proj);
+    }
     else { std::cout << "Unknown command: " << cmd << "\n"; return 1; }
 }
