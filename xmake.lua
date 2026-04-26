@@ -3,9 +3,10 @@ add_requires("openssl")
 add_requires("cpp-httplib")
 add_requires("nlohmann_json")
 
-if is_host("linux") and os.getenv("TERMUX_VERSION") then
-    set_toolset("cc", "clang")
-    set_toolset("cxx", "clang++")
+local is_termux = is_host("linux") and os.getenv("TERMUX_VERSION")
+
+if is_termux then
+    set_toolchains("clang")
 end
 
 target("client")
