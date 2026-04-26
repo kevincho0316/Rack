@@ -75,7 +75,7 @@ std::string RepoBuilder::createPlateFile(const std::string& name, const std::str
     ProgressBar pb(total, "Hashing ");
     std::string treeHash = createTreeFileImpl(fs::current_path().string(), &pb);
 
-    if (store.newFile.empty()) return "No Diff Found";
+    if (store.newFile.empty() && name=="" && flag=="") return "No Diff Found";
 
     Plate plate(parentHash, treeHash, name, flag);
     if (store.exists(plate.hash)) return plate.hash;

@@ -17,7 +17,7 @@ namespace Commands {
 int commit(Rack& rack, const std::string& name, const std::string& flag) {
     std::string result = rack.commit(name, flag);
     std::cout << "Local commit: " << result << "\n";
-    if (result == "No Diff Found") return 0;
+    if (result == "No Diff Found" && name=="" && flag == "") return 0;
     if (!rack.api.project.empty() && rack.isServerOn()) {
         rack.push();
     } else if (!rack.api.project.empty()) {
