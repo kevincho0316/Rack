@@ -3,10 +3,6 @@ add_requires("openssl")
 add_requires("cpp-httplib")
 add_requires("nlohmann_json")
 
-if is_host("linux") and os.getenv("TERMUX_VERSION") then
-    add_cxxflags("-stdlib=libc++")
-    add_ldflags("-stdlib=libc++")
-end
 
 target("client")
     set_kind("binary")
