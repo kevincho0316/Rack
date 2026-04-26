@@ -4,6 +4,9 @@
 #include "Routes.h"
 
 int main() {
+    setvbuf(stdout, nullptr, _IONBF, 0);
+    std::ios::sync_with_stdio(true);
+
     ServerStorage storage("data");
     storage.init();
 
