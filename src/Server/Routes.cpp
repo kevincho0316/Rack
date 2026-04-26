@@ -38,6 +38,7 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
                 return;
             }
             storage.createProject(name);
+            std::cout << "  [project] created: " << name << std::endl;
             res.status = 201;
             res.set_content(json{{"name", name}}.dump(), "application/json");
         } catch (...) {
@@ -55,10 +56,14 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
         try {
             auto j = json::parse(req.body);
             json missing = json::array();
-            for (const auto& h : j.at("hashes")) {
+            auto hashes = j.at("hashes");
+            for (const auto& h : hashes) {
                 if (!storage.blobExists(p, h.get<std::string>()))
                     missing.push_back(h);
             }
+            std::cout << "  [check] project=" << p
+                      << " requested=" << hashes.size()
+                      << " missing=" << missing.size() << std::endl;
             res.set_content(json{{"missing", missing}}.dump(), "application/json");
         } catch (...) {
             res.status = 400;
@@ -71,7 +76,10 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
         std::string p = req.matches[1];
         if (!requireProject(storage, p, res)) return;
         std::string hash = GetHash(req.body);
-        if (!storage.blobExists(p, hash)) storage.writeBlob(p, hash, req.body);
+        bool existed = storage.blobExists(p, hash);
+        if (!existed) storage.writeBlob(p, hash, req.body);
+        std::cout << "  [blob] " << (existed ? "exists" : "stored")
+                  << " " << hash.substr(0, 12) << " (" << req.body.size() << " bytes) project=" << p << std::endl;
         res.status = 201;
         res.set_content(json{{"hash", hash}}.dump(), "application/json");
     });
@@ -81,8 +89,13 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
         std::string p    = req.matches[1];
         std::string hash = req.matches[2];
         if (!requireProject(storage, p, res)) return;
-        if (!storage.blobExists(p, hash)) { res.status = 404; return; }
-        res.set_content(storage.readBlob(p, hash), "application/octet-stream");
+        if (!storage.blobExists(p, hash)) {
+            std::cout << "  [blob] miss " << hash.substr(0, 12) << " project=" << p << std::endl;
+            res.status = 404; return;
+        }
+        auto data = storage.readBlob(p, hash);
+        std::cout << "  [blob] sent " << hash.substr(0, 12) << " (" << data.size() << " bytes) project=" << p << std::endl;
+        res.set_content(data, "application/octet-stream");
     });
 
     // ---- plates ----
@@ -106,10 +119,17 @@ void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
             json plate = {{"id", id}, {"parent", parent}, {"name", name},
                           {"note", note}, {"flag", flag}, {"tree", tree}};
 
-            if (!storage.plateExists(p, id)) {
+            bool existed = storage.plateExists(p, id);
+            if (!existed) {
                 storage.writePlate(p, id, plate.dump());
                 storage.writeHead(p, id);
             }
+            std::cout << "  [plate] " << (existed ? "exists" : "created")
+                      << " id=" << id.substr(0, 12)
+                      << " parent=" << (parent.empty() ? "(none)" : parent.substr(0, 12))
+                      << " name=\"" << name << "\""
+                      << " files=" << tree.size()
+                      << " project=" << p << std::endl;
             res.status = 201;
             res.set_content(plate.dump(), "application/json");
         } catch (...) {

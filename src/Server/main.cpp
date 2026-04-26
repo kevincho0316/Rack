@@ -10,7 +10,11 @@ int main() {
     httplib::Server svr;
     registerRoutes(svr, storage);
 
-    std::cout << "Server: http://localhost:8080\n";
+    svr.set_logger([](const httplib::Request& req, const httplib::Response& res) {
+        std::cout << req.method << " " << req.path << " -> " << res.status << std::endl;
+    });
+
+    std::cout << "Server: http://0.0.0.0:8080" << std::endl;
     svr.listen("0.0.0.0", 8080);
     return 0;
 }
