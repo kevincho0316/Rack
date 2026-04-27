@@ -9,7 +9,11 @@ namespace RackPaths {
     inline const std::filesystem::path configFile = ".rack/config";  // stores: project
 
     inline std::filesystem::path globalConfigFile() {
-        const char* home = std::getenv("HOME");
+        const char* home = nullptr;
+#ifdef _WIN32
+        home = std::getenv("USERPROFILE");
+#endif
+        if (!home) home = std::getenv("HOME");
         return home ? std::filesystem::path(home) / ".rack" / "config"
                     : std::filesystem::path(".rack") / "config";
     }
