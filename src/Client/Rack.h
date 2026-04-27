@@ -12,6 +12,7 @@ class Rack {
 
     void loadConfig();
     void saveConfig();
+    void saveGlobalConfig();
 
 public:
     ObjectStore store;
@@ -27,6 +28,7 @@ public:
     std::vector<std::string> ls();
     void                     reconstruct(const std::filesystem::path& dest);
     void                     setDomain(const std::string& domain);
+    void                     setApiKey(const std::string& key);
     bool                     isServerOn();
 
     void push(const std::string& proj = "");

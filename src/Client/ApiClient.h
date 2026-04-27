@@ -16,9 +16,11 @@ struct PlateInfo {
 
 class ApiClient {
     ObjectStore& store;
+    httplib::Client makeClient() const;
 public:
     std::string domain;
     std::string project;
+    std::string apiKey;
 
     explicit ApiClient(ObjectStore& store,
                        std::string domain  = "http://localhost:8080",

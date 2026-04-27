@@ -10,6 +10,7 @@
 #include <sstream>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include "Color.h"
 #include "ProgressBar.h"
 
 namespace fs = std::filesystem;
@@ -40,20 +41,26 @@ void Rack::loadConfig() {
 
     loadJson(RackPaths::globalConfigFile(), [&](const json& j) {
         if (j.contains("domain")) api.domain = j["domain"];
+        if (j.contains("apiKey")) api.apiKey = j["apiKey"];
     });
     loadJson(RackPaths::configFile, [&](const json& j) {
-        if (j.contains("project"))       api.project  = j["project"];
+        if (j.contains("project"))       api.project   = j["project"];
         if (j.contains("serverPlateId")) serverPlateId = j["serverPlateId"];
     });
 }
 
-void Rack::saveConfig() {
+void Rack::saveGlobalConfig() {
     auto globalDir = RackPaths::globalConfigFile().parent_path();
     if (!fs::exists(globalDir)) fs::create_directories(globalDir);
-
+    json j;
+    if (!api.domain.empty()) j["domain"] = api.domain;
+    if (!api.apiKey.empty()) j["apiKey"] = api.apiKey;
     std::ofstream g(RackPaths::globalConfigFile());
-    g << json{{"domain", api.domain}}.dump(2);
+    g << j.dump(2);
+}
 
+void Rack::saveConfig() {
+    saveGlobalConfig();
     std::ofstream l(RackPaths::configFile);
     l << json{{"project", api.project}, {"serverPlateId", serverPlateId}}.dump(2);
 }
@@ -88,7 +95,12 @@ void Rack::reconstruct(const fs::path& dest) {
 
 void Rack::setDomain(const std::string& domain) {
     api.domain = domain;
-    saveConfig();
+    saveGlobalConfig();
+}
+
+void Rack::setApiKey(const std::string& key) {
+    api.apiKey = key;
+    saveGlobalConfig();
 }
 
 bool Rack::isServerOn() {
@@ -100,24 +112,24 @@ void Rack::push(const std::string& proj) {
     bool isOverride = !proj.empty() && proj != sp.saved;
 
     if (api.project.empty()) {
-        std::cout << "[WARN] No project set. Run: rack init <project>\n";
+        std::cout << Color::y("[WARN]") << " No project set. Run: rack init <project>\n";
         return;
     }
 
     std::string plateHash = store.readInit();
-    if (plateHash.empty()) { std::cout << "Nothing to push — no commits\n"; return; }
+    if (plateHash.empty()) { std::cout << Color::dim("Nothing to push — no commits") << "\n"; return; }
 
     std::string plateData  = store.read(plateHash);
     std::string treeHash   = extractField(plateData, "[Tree]");
 
     auto flatTree = reader.flattenTree(treeHash);
-    if (flatTree.empty()) { std::cout << "Empty tree — nothing to push\n"; return; }
+    if (flatTree.empty()) { std::cout << Color::dim("Empty tree — nothing to push") << "\n"; return; }
 
     std::vector<std::string> allHashes;
     for (const auto& [path, hash] : flatTree) allHashes.push_back(hash);
 
     std::vector<std::string> missing = api.checkBlobs(allHashes);
-    std::cout << "Blobs: " << allHashes.size() << " total, "
+    std::cout << Color::c("Blobs:") << " " << allHashes.size() << " total, "
               << missing.size() << " to upload\n";
 
     if (!missing.empty()) {
@@ -125,7 +137,7 @@ void Rack::push(const std::string& proj) {
         for (const auto& hash : missing) {
             std::string data = store.read(hash);
             std::string serverHash = api.uploadBlob(data);
-            if (serverHash.empty()) { std::cout << "\nUpload failed for " << hash << "\n"; return; }
+            if (serverHash.empty()) { std::cout << "\n" << Color::r("Upload failed for ") << hash << "\n"; return; }
             pb.tick();
         }
     }
@@ -138,19 +150,19 @@ void Rack::push(const std::string& proj) {
     std::string plateId  = api.createPlate(parentId, flatTree, plateName, plateFlag);
     if (!plateId.empty()) {
         if (!isOverride) { serverPlateId = plateId; saveConfig(); }
-        std::cout << "Pushed plate: " << plateId << "\n";
+        std::cout << Color::gb("Pushed plate:") << " " << plateId << "\n";
     }
 }
 
 void Rack::pull(bool overwriteOnly, const std::string& proj) {
     ScopedProject sp(api.project, proj);
     if (api.project.empty()) {
-        std::cout << "[WARN] No project set. Run: rack init <project>\n";
+        std::cout << Color::y("[WARN]") << " No project set. Run: rack init <project>\n";
         return;
     }
 
     auto tree = api.fetchLatestTree();
-    if (tree.empty()) { std::cout << "Nothing to pull\n"; return; }
+    if (tree.empty()) { std::cout << Color::dim("Nothing to pull") << "\n"; return; }
 
     if (!overwriteOnly) {
         std::set<std::string> serverPaths;
@@ -166,11 +178,11 @@ void Rack::pull(bool overwriteOnly, const std::string& proj) {
         }
         for (const auto& p : toDelete) {
             fs::remove(p);
-            std::cout << "Removed: " << fs::relative(p, fs::current_path()).string() << "\n";
+            std::cout << Color::r("Removed:") << " " << fs::relative(p, fs::current_path()).string() << "\n";
         }
     }
 
-    std::cout << "Pulling " << tree.size() << " files\n";
+    std::cout << Color::c("Pulling") << " " << tree.size() << " files\n";
     ProgressBar pb(static_cast<int>(tree.size()), "Pulling ");
     for (const auto& [path, hash] : tree) {
         pb.tick();
@@ -183,15 +195,16 @@ void Rack::pull(bool overwriteOnly, const std::string& proj) {
         std::ofstream f(fpath, std::ios::binary);
         f << data;
     }
-    std::cout << "Pull complete\n";
+    std::cout << Color::gb("Pull complete") << "\n";
 }
 
 void Rack::log(const std::string& proj) {
     ScopedProject sp(api.project, proj);
-    if (api.project.empty()) { std::cout << "[WARN] No project set\n"; return; }
+    if (api.project.empty()) { std::cout << Color::y("[WARN]") << " No project set\n"; return; }
     auto chain = api.fetchLog();
     if (chain.empty()) { std::cout << "No plates yet\n"; return; }
-    std::cout << "Project: " << api.project << "  (" << chain.size() << " plates)\n";
+    std::cout << "Project: " << Color::b(api.project)
+              << Color::dim("  (" + std::to_string(chain.size()) + " plates)") << "\n";
     for (size_t i = 0; i < chain.size(); ++i) {
         const auto& p = chain[i];
         std::string timeStr = "unknown";
@@ -202,19 +215,24 @@ void Rack::log(const std::string& proj) {
             oss << std::put_time(tm, "%Y-%m-%d %H:%M:%S");
             timeStr = oss.str();
         }
-        std::string label = (i == 0) ? " <- HEAD" : "";
-        std::cout << p.id.substr(0, 12)
-                  << "  [" << p.flag << "]"
-                  << "  \"" << p.name << "\""
-                  << "  " << p.fileCount << " files"
-                  << "  " << timeStr
-                  << label << "\n";
+        std::string flagStr;
+        if (p.flag == "Hotfix") flagStr = Color::r("[Hotfix]");
+        else if (p.flag == "Knot") flagStr = Color::m("[Knot]");
+        else flagStr = Color::dim("[Normal]");
+        std::string nameStr = p.name.empty() ? Color::dim("\"\"") : Color::y("\"" + p.name + "\"");
+        std::string headStr = (i == 0) ? "  " + Color::gb("<- HEAD") : "";
+        std::cout << Color::dim(p.id.substr(0, 12))
+                  << "  " << flagStr
+                  << "  " << nameStr
+                  << "  " << Color::dim(std::to_string(p.fileCount) + " files")
+                  << "  " << Color::dim(timeStr)
+                  << headStr << "\n";
     }
 }
 
 void Rack::files(const std::string& proj) {
     ScopedProject sp(api.project, proj);
-    if (api.project.empty()) { std::cout << "[WARN] No project set\n"; return; }
+    if (api.project.empty()) { std::cout << Color::y("[WARN]") << " No project set\n"; return; }
     auto tree = api.fetchLatestTree();
     if (tree.empty()) { std::cout << "No files on server\n"; return; }
     std::cout << "Files in latest plate (" << tree.size() << "):\n";
@@ -246,18 +264,18 @@ void Rack::status(const std::string& proj) {
 
     bool clean = true;
     for (const auto& [path, hash] : localTree) {
-        if (!serverTree.count(path))           { std::cout << "  new:      " << path << "\n"; clean = false; }
-        else if (serverTree.at(path) != hash)  { std::cout << "  modified: " << path << "\n"; clean = false; }
+        if (!serverTree.count(path))           { std::cout << "  " << Color::g("new:     ") << " " << path << "\n"; clean = false; }
+        else if (serverTree.at(path) != hash)  { std::cout << "  " << Color::y("modified:") << " " << path << "\n"; clean = false; }
     }
     for (const auto& [path, hash] : serverTree)
-        if (!localTree.count(path))            { std::cout << "  deleted:  " << path << "\n"; clean = false; }
+        if (!localTree.count(path))            { std::cout << "  " << Color::r("deleted: ") << " " << path << "\n"; clean = false; }
 
-    if (clean) std::cout << "Up to date with server\n";
+    if (clean) std::cout << Color::gb("Up to date with server") << "\n";
 }
 
 void Rack::restore(const std::string& plateId, const std::string& proj) {
     ScopedProject sp(api.project, proj);
-    if (api.project.empty()) { std::cout << "[WARN] No project set\n"; return; }
+    if (api.project.empty()) { std::cout << Color::y("[WARN]") << " No project set\n"; return; }
     auto tree = api.fetchTree(plateId);
     if (tree.empty()) { std::cout << "Plate not found or empty\n"; return; }
 
@@ -283,7 +301,7 @@ void Rack::restore(const std::string& plateId, const std::string& proj) {
         std::ofstream f(fpath, std::ios::binary);
         f << data;
     }
-    std::cout << "Restored plate " << plateId.substr(0, 12) << "\n";
+    std::cout << Color::gb("Restored plate") << " " << plateId.substr(0, 12) << "\n";
 }
 
 // ── diff helpers ────────────────────────────────────────────────────────────
@@ -308,7 +326,8 @@ static void printUnifiedDiff(const std::string& path,
                               const std::string& contB) {
     std::string headerA = contA.empty() ? "/dev/null" : "a/" + path;
     std::string headerB = contB.empty() ? "/dev/null" : "b/" + path;
-    std::cout << "--- " << headerA << "\n+++ " << headerB << "\n";
+    std::cout << Color::dim("--- " + headerA) << "\n"
+              << Color::dim("+++ " + headerB) << "\n";
 
     if (isBinary(contA) || isBinary(contB)) {
         std::cout << "  Binary files differ\n";
@@ -361,9 +380,11 @@ static void printUnifiedDiff(const std::string& path,
     bool inHunk = false;
     for (int k = 0; k < sz; k++) {
         if (!show[k]) { inHunk = false; continue; }
-        if (!inHunk) { std::cout << "@@ ... @@\n"; inHunk = true; }
-        char c = ops[k].first == -1 ? '-' : ops[k].first == 1 ? '+' : ' ';
-        std::cout << c << ops[k].second << "\n";
+        if (!inHunk) { std::cout << Color::c("@@ ... @@") << "\n"; inHunk = true; }
+        auto& ln = ops[k].second;
+        if      (ops[k].first == -1) std::cout << Color::r("-" + ln) << "\n";
+        else if (ops[k].first ==  1) std::cout << Color::g("+" + ln) << "\n";
+        else                         std::cout << " " << ln << "\n";
     }
 }
 
@@ -461,7 +482,7 @@ bool Rack::initProject(const std::string& name) {
     if (ok) {
         api.project = name;
         saveConfig();
-        std::cout << "Project '" << name << "' active\n";
+        std::cout << Color::g("Project '") << name << Color::g("' active") << "\n";
     }
     return ok;
 }

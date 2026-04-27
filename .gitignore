@@ -8,4 +8,7 @@ build/
 # Rack store (contains domain/IP in config, object blobs, HEAD pointer)
 .rack/
 
+# Server data (project files, blobs, plates)
+data/
+
 

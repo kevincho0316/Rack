@@ -15,7 +15,20 @@ static bool requireProject(ServerStorage& s, const std::string& p, httplib::Resp
     return true;
 }
 
-void registerRoutes(httplib::Server& svr, ServerStorage& storage) {
+void registerRoutes(httplib::Server& svr, ServerStorage& storage, const std::string& apiKey) {
+
+    if (!apiKey.empty()) {
+        svr.set_pre_routing_handler([apiKey](const httplib::Request& req, httplib::Response& res) {
+            if (req.path == "/hello") return httplib::Server::HandlerResponse::Unhandled;
+            std::string auth = req.get_header_value("Authorization");
+            if (auth != "Bearer " + apiKey) {
+                res.status = 401;
+                res.set_content(R"({"error":"unauthorized"})", "application/json");
+                return httplib::Server::HandlerResponse::Handled;
+            }
+            return httplib::Server::HandlerResponse::Unhandled;
+        });
+    }
 
     svr.Get("/hello", [](const httplib::Request&, httplib::Response& res) {
         res.set_content("OK", "text/plain");

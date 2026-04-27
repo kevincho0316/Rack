@@ -8,15 +8,22 @@ using json = nlohmann::json;
 ApiClient::ApiClient(ObjectStore& s, std::string d, std::string p)
     : store(s), domain(std::move(d)), project(std::move(p)) {}
 
-bool ApiClient::isServerOn() {
+httplib::Client ApiClient::makeClient() const {
     httplib::Client cli(domain);
+    if (!apiKey.empty())
+        cli.set_default_headers({{"Authorization", "Bearer " + apiKey}});
+    return cli;
+}
+
+bool ApiClient::isServerOn() {
+    httplib::Client cli(domain);  // intentionally no auth — /hello is public
     auto res = cli.Get("/hello");
     if (!res) { std::cout << "Server unreachable: " << res.error() << "\n"; return false; }
     return res->status == 200;
 }
 
 std::vector<std::string> ApiClient::checkBlobs(const std::vector<std::string>& hashes) {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     json body = {{"hashes", hashes}};
     auto res = cli.Post("/projects/" + project + "/blobs/check",
                         body.dump(), "application/json");
@@ -29,7 +36,7 @@ std::vector<std::string> ApiClient::checkBlobs(const std::vector<std::string>& h
 }
 
 std::string ApiClient::uploadBlob(const std::string& data) {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     auto res = cli.Post("/projects/" + project + "/blobs", data, "application/octet-stream");
     if (!res || res->status != 201) {
         std::cout << "uploadBlob failed\n";
@@ -42,7 +49,7 @@ std::string ApiClient::createPlate(const std::string& parent,
                                    const std::map<std::string, std::string>& tree,
                                    const std::string& name,
                                    const std::string& flag) {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     json treeJson = json::object();
     for (const auto& [path, hash] : tree) treeJson[path] = hash;
     json body = {{"parent", parent}, {"name", name}, {"flag", flag}, {"tree", treeJson}};
@@ -56,7 +63,7 @@ std::string ApiClient::createPlate(const std::string& parent,
 }
 
 std::map<std::string, std::string> ApiClient::fetchLatestTree() {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     auto res = cli.Get("/projects/" + project + "/plates/latest");
     if (!res || res->status != 200) {
         std::cout << "fetchLatestTree failed\n";
@@ -71,7 +78,7 @@ std::map<std::string, std::string> ApiClient::fetchLatestTree() {
 
 std::string ApiClient::downloadBlob(const std::string& hash) {
     if (store.exists(hash)) return store.read(hash);
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     auto res = cli.Get("/projects/" + project + "/blobs/" + hash);
     if (!res || res->status != 200) {
         std::cout << "downloadBlob failed: " << hash << "\n";
@@ -82,7 +89,7 @@ std::string ApiClient::downloadBlob(const std::string& hash) {
 }
 
 std::map<std::string, std::string> ApiClient::fetchTree(const std::string& plateId) {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     auto res = cli.Get("/projects/" + project + "/plates/" + plateId + "/tree");
     if (!res || res->status != 200) {
         std::cout << "fetchTree failed\n";
@@ -96,7 +103,7 @@ std::map<std::string, std::string> ApiClient::fetchTree(const std::string& plate
 }
 
 std::vector<PlateInfo> ApiClient::fetchLog() {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
 
     auto allRes = cli.Get("/projects/" + project + "/plates");
     if (!allRes || allRes->status != 200) { std::cout << "fetchLog failed\n"; return {}; }
@@ -134,7 +141,7 @@ std::vector<PlateInfo> ApiClient::fetchLog() {
 }
 
 std::vector<std::string> ApiClient::listProjects() {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     auto res = cli.Get("/projects");
     if (!res || res->status != 200) { std::cout << "listProjects failed\n"; return {}; }
     auto j = json::parse(res->body);
@@ -144,7 +151,7 @@ std::vector<std::string> ApiClient::listProjects() {
 }
 
 bool ApiClient::initProject(const std::string& name) {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     json body = {{"name", name}};
     auto res = cli.Post("/projects", body.dump(), "application/json");
     if (!res) { std::cout << "initProject: server unreachable\n"; return false; }
@@ -154,7 +161,7 @@ bool ApiClient::initProject(const std::string& name) {
 }
 
 bool ApiClient::deleteProject() {
-    httplib::Client cli(domain);
+    auto cli = makeClient();
     auto res = cli.Delete("/projects/" + project);
     return res && res->status == 200;
 }

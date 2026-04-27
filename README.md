@@ -41,6 +41,7 @@ rack cat <hash>                          Print object contents by hash
 rack ls                                  List all local object hashes
 rack reconstruct                         Rebuild files from local HEAD plate
 rack serverCheck                         Exit 0 if server reachable
+rack checkout <url> <project>            Set domain, init project, pull (fresh device setup)
 ```
 
 Plate IDs can be shortened to any unique prefix (e.g. `931121fa8fb5`).

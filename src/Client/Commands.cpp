@@ -1,6 +1,7 @@
 #include "Commands.h"
 #include <filesystem>
 #include <iostream>
+#include "Color.h"
 
 namespace fs = std::filesystem;
 
@@ -16,13 +17,28 @@ namespace Commands {
 
 int commit(Rack& rack, const std::string& name, const std::string& flag) {
     std::string result = rack.commit(name, flag);
-    std::cout << "Local commit: " << result << "\n";
+    std::cout << Color::gb("Local commit:") << " " << result << "\n";
     if (result == "No Diff Found" && name=="" && flag == "") return 0;
     if (!rack.api.project.empty() && rack.isServerOn()) {
         rack.push();
     } else if (!rack.api.project.empty()) {
-        std::cout << "[WARN] Server offline — local commit saved, push skipped\n";
+        std::cout << Color::y("[WARN]") << " Server offline — local commit saved, push skipped\n";
     }
+    return 0;
+}
+
+int setApiKey(Rack& rack, const std::string& key) {
+    rack.setApiKey(key);
+    std::cout << Color::g("API key saved") << " to ~/.rack/config\n";
+    return 0;
+}
+
+int checkout(Rack& rack, const std::string& domain, const std::string& project) {
+    rack.setDomain(domain);
+    std::cout << Color::c("Domain:") << " " << domain << "\n";
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline\n"); return 1; }
+    if (!rack.initProject(project)) return 1;
+    rack.pull(false, "");
     return 0;
 }
 
@@ -38,7 +54,7 @@ int ls(Rack& rack) {
 
 int setDomain(Rack& rack, const std::string& domain) {
     rack.setDomain(domain);
-    std::cout << "Domain set: " << domain << "\n";
+    std::cout << Color::g("Domain set:") << " " << domain << "\n";
     return 0;
 }
 
@@ -52,42 +68,42 @@ int serverCheck(Rack& rack) {
 }
 
 int push(Rack& rack, const std::string& proj) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     rack.push(proj);
     return 0;
 }
 
 int pull(Rack& rack, bool overwriteOnly, const std::string& proj) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     rack.pull(overwriteOnly, proj);
     return 0;
 }
 
 int init(Rack& rack, const std::string& project) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     return rack.initProject(project) ? 0 : 1;
 }
 
 int log(Rack& rack, const std::string& proj) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     rack.log(proj);
     return 0;
 }
 
 int files(Rack& rack, const std::string& proj) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     rack.files(proj);
     return 0;
 }
 
 int projects(Rack& rack) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     rack.projects();
     return 0;
 }
 
 int status(Rack& rack, const std::string& proj) {
-    if (!rack.isServerOn()) { std::cout << "Server offline\n"; return 1; }
+    if (!rack.isServerOn()) { std::cout << Color::y("Server offline") << "\n"; return 1; }
     rack.status(proj);
     return 0;
 }

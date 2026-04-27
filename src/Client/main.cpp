@@ -22,7 +22,9 @@ int main(int argc, char** argv) {
                      "  cat <hash>                           print object by hash\n"
                      "  ls                                   list all local object hashes\n"
                      "  reconstruct                          rebuild files from local HEAD\n"
-                     "  serverCheck                          exit 0 if server reachable\n";
+                     "  serverCheck                          exit 0 if server reachable\n"
+                     "  checkout <url> <project>             set domain, init project, pull files\n"
+                     "  auth <key>                           set API key (saved globally in ~/.rack/config)\n";
         return 1;
     }
 
@@ -86,5 +88,7 @@ int main(int argc, char** argv) {
         }
         return Commands::deleteProject(rack, proj, autoConfirm);
     }
+    else if (cmd == "checkout" && argc == 4) return Commands::checkout(rack, argv[2], argv[3]);
+    else if (cmd == "auth"     && argc == 3) return Commands::setApiKey(rack, argv[2]);
     else { std::cout << "Unknown command: " << cmd << "\n"; return 1; }
 }

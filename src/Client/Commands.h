@@ -20,4 +20,6 @@ namespace Commands {
     int status(Rack& rack, const std::string& proj = "");
     int restore(Rack& rack, const std::string& plateId, const std::string& proj = "");
     int diff(Rack& rack, const std::string& plateIdA = "", const std::string& plateIdB = "");
+    int checkout(Rack& rack, const std::string& domain, const std::string& project);
+    int setApiKey(Rack& rack, const std::string& key);
 }
